@@ -14,13 +14,35 @@ import bcrypt from "bcryptjs";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-const router = express.Router();
+const getMe = async (req, res) => {
+  const { authorization } = req.headers;
+  const token = authorization
+    ? authorization.split("Bearer ").length
+      ? authorization.split("Bearer ")[1]
+      : null
+    : null;
+  console.log(token);
 
-router.get("/", authenticate, async (req, res) => {
-  res.status(200).json(req.user);
-});
+  if (token) {
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = user;
+    res.status(200).json(req.user);
+  }
+};
 
-router.post("/signup", async (req, res) => {
+const getAllUsers = async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const users = await db.collection("user").find({}).toArray();
+    if (users) {
+      return res.status(200).json(users);
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const registerUser = async (req, res) => {
   const { email, name, password } = req.body;
 
   if (!email || !name || !password) {
@@ -36,11 +58,16 @@ router.post("/signup", async (req, res) => {
     });
 
     if (newFirebaseUser) {
+      //   const token = await firebaseAdmin.auth.createCustomToken(
+      //     newFirebaseUser.uid
+      //   );
       const userCollection = req.app.locals.db.collection("user");
       const user = await userCollection.insertOne({
         email,
         name,
-        firebaseId: newFirebaseUser.uid
+        firebaseId: newFirebaseUser.uid,
+        surfingBalance: 0,
+        advertisingBalance: 0
       });
 
       const newUser = await userCollection.findOne(user._id);
@@ -48,7 +75,9 @@ router.post("/signup", async (req, res) => {
         id: newUser._id,
         name: newUser.name,
         email: newUser.email,
-        token: generateToken(newUser.firebaseId)
+        surfingBalance: newUser.surfingBalance,
+        advertisingBalance: newUser.advertisingBalance,
+        token: generateToken(newUser._id)
       });
     }
   } catch (error) {
@@ -57,11 +86,11 @@ router.post("/signup", async (req, res) => {
         .status(400)
         .json({ error: `User with email: ${email} already exists` });
     }
-    return res.status(500).json({ error: "Server error. Please try again" });
+    return res.status(500).json({ error: error.message });
   }
-});
+};
 
-router.post("/login", async (req, res) => {
+const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -72,14 +101,21 @@ router.post("/login", async (req, res) => {
   try {
     const email_exists = await firebaseAdmin.auth.getUserByEmail(email);
     if (email_exists) {
-      await signInWithEmailAndPassword(auth, email, password)
-      const userData = await req.app.locals.db.collection("user").findOne({email})
+      //   const token = await firebaseAdmin.auth.createCustomToken(
+      //     email_exists.uid
+      //   );
+      await signInWithEmailAndPassword(auth, email, password);
+      const userData = await req.app.locals.db
+        .collection("user")
+        .findOne({ email });
       return res.status(200).json({
         id: userData._id,
         name: userData.name,
         email: userData.email,
-        token: generateToken(userData.firebaseId)
-      })
+        surfingBalance: userData.surfingBalance,
+        advertisingBalance: userData.advertisingBalance,
+        token: generateToken(userData._id)
+      });
     }
   } catch (error) {
     const message =
@@ -90,9 +126,9 @@ router.post("/login", async (req, res) => {
           : error.toString();
     return res.status(400).json({ error: message });
   }
-});
+};
 
-router.post("/passwordreset", async (req, res) => {
+const resetPassword = async (req, res) => {
   const { email } = req.body;
   if (!email) {
     return res.status(400).json({
@@ -107,7 +143,7 @@ router.post("/passwordreset", async (req, res) => {
   } catch (error) {
     console.log(error);
   }
-});
+};
 
 //Generate JWT
 const generateToken = id => {
@@ -116,4 +152,4 @@ const generateToken = id => {
   });
 };
 
-export default router;
+export { registerUser, loginUser, resetPassword, getMe, getAllUsers };
