@@ -8,6 +8,7 @@ export default async function (connectionString, app) {
         console.log("++ Database connected.")
     } catch (error) {
         await client.close()
+        console.log(error)
         throw new Error("Database connection error.")
     }
 }

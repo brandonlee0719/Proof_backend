@@ -1,18 +1,30 @@
-import express from "express";
 import { initializeApp } from "firebase/app";
 import authenticate from "../middleware/authenticate.js";
 import firebaseAdmin from "../services/firebase.js";
 import {
   getAuth,
+  GoogleAuthProvider,
   sendPasswordResetEmail,
-  signInWithEmailAndPassword
+  signInWithEmailAndPassword,
+  signInWithPopup
 } from "firebase/auth";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  getFirestore,
+  query,
+  where
+} from "firebase/firestore";
 import { firebaseConfig } from "../services/firebaseConfig.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
+
+const googleProvider = new GoogleAuthProvider();
 
 const getMe = async (req, res) => {
   const { authorization } = req.headers;
@@ -90,6 +102,43 @@ const registerUser = async (req, res) => {
   }
 };
 
+const registerWithGoogle = async (req, res) => {
+  try {
+    const res = await signInWithPopup(auth, googleProvider);
+    const user = res.user;
+    const q = query(collection(db, "users"), where("uid", "==", user.uid));
+    const docs = await getDocs(q);
+    if (docs.docs.length === 0) {
+      await addDoc(collection(db, "users"), {
+        uid: user.uid,
+        name: user.displayName,
+        authProvider: "google",
+        email: user.email
+      });
+    }
+    const userCollection = req.app.locals.db.collection("user");
+    const data = await userCollection.insertOne({
+      email: user.email,
+      name: user.displayName,
+      firebaseId: user.uid,
+      surfingBalance: 0,
+      advertisingBalance: 0
+    });
+
+    const newUser = await userCollection.findOne(data._id);
+    return res.status(201).json({
+      id: newUser._id,
+      name: newUser.name,
+      email: newUser.email,
+      surfingBalance: newUser.surfingBalance,
+      advertisingBalance: newUser.advertisingBalance,
+      token: generateToken(newUser._id)
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -152,4 +201,11 @@ const generateToken = id => {
   });
 };
 
-export { registerUser, loginUser, resetPassword, getMe, getAllUsers };
+export {
+  registerUser,
+  registerWithGoogle,
+  loginUser,
+  resetPassword,
+  getMe,
+  getAllUsers
+};
