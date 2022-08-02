@@ -14,8 +14,8 @@ const router = express.Router();
 router.post("/signup", registerUser);
 router.post("/registerWithGoogle", registerWithGoogle);
 router.post("/login", loginUser);
-router.get("/user", getMe);
-router.get("/users", getAllUsers);
+router.get("/user/:id", getMe);
+router.get("/users/:id", getAllUsers);
 router.post("/resetpassword", resetPassword);
 
 export default router;

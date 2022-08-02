@@ -27,6 +27,7 @@ const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
 const getMe = async (req, res) => {
+  const _id = req.params.id;
   const { authorization } = req.headers;
   const token = authorization
     ? authorization.split("Bearer ").length
@@ -37,17 +38,35 @@ const getMe = async (req, res) => {
 
   if (token) {
     const user = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = user;
-    res.status(200).json(req.user);
+    if (_id === user.id.id) {
+      return res.status(200).json({ user: user.id });
+    } else {
+      return res.status(400).json("User not found");
+    }
+  } else {
+    return res.status(500).json({ error: "Token not found" });
   }
 };
 
 const getAllUsers = async (req, res) => {
   try {
-    const db = req.app.locals.db;
-    const users = await db.collection("user").find({}).toArray();
-    if (users) {
-      return res.status(200).json(users);
+    const _id = req.params.id;
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
+    if (token) {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      if (_id === user.id.id) {
+        const db = req.app.locals.db;
+        const users = await db.collection("user").find({}).toArray();
+        if (users) {
+          return res.status(200).json(users);
+        }
+      }
     }
   } catch (error) {
     console.log(error);
@@ -83,14 +102,27 @@ const registerUser = async (req, res) => {
       });
 
       const newUser = await userCollection.findOne(user._id);
-      return res.status(201).json({
+      const payload = {
         id: newUser._id,
         name: newUser.name,
         email: newUser.email,
         surfingBalance: newUser.surfingBalance,
-        advertisingBalance: newUser.advertisingBalance,
-        token: generateToken(newUser._id)
-      });
+        advertisingBalance: newUser.advertisingBalance
+      };
+      const token = await generateToken(payload);
+      if (token) {
+        return res.status(201).json({ token: token });
+      } else {
+        return res.status(400).json("Unable to generate token");
+      }
+      // return res.status(201).json({
+      //   id: newUser._id,
+      //   name: newUser.name,
+      //   email: newUser.email,
+      //   surfingBalance: newUser.surfingBalance,
+      //   advertisingBalance: newUser.advertisingBalance,
+      //   token: generateToken(newUser._id)
+      // });
     }
   } catch (error) {
     if (error.code === "auth/email-already-exists") {
@@ -126,14 +158,27 @@ const registerWithGoogle = async (req, res) => {
     });
 
     const newUser = await userCollection.findOne(data._id);
-    return res.status(201).json({
+    const payload = {
       id: newUser._id,
       name: newUser.name,
       email: newUser.email,
       surfingBalance: newUser.surfingBalance,
-      advertisingBalance: newUser.advertisingBalance,
-      token: generateToken(newUser._id)
-    });
+      advertisingBalance: newUser.advertisingBalance
+    };
+    const token = await generateToken(payload);
+    if (token) {
+      return res.status(201).json({ token: token });
+    } else {
+      return res.status(400).json("Unable to generate token");
+    }
+    // return res.status(201).json({
+    //   id: newUser._id,
+    //   name: newUser.name,
+    //   email: newUser.email,
+    //   surfingBalance: newUser.surfingBalance,
+    //   advertisingBalance: newUser.advertisingBalance,
+    //   token: generateToken(newUser._id)
+    // });
   } catch (error) {
     console.error(error);
   }
@@ -157,14 +202,19 @@ const loginUser = async (req, res) => {
       const userData = await req.app.locals.db
         .collection("user")
         .findOne({ email });
-      return res.status(200).json({
+      const payload = {
         id: userData._id,
         name: userData.name,
         email: userData.email,
         surfingBalance: userData.surfingBalance,
-        advertisingBalance: userData.advertisingBalance,
-        token: generateToken(userData._id)
-      });
+        advertisingBalance: userData.advertisingBalance
+      };
+      const token = await generateToken(payload);
+      if (token) {
+        return res.status(201).json({ token: token });
+      } else {
+        return res.status(400).json("Unable to generate token");
+      }
     }
   } catch (error) {
     const message =
