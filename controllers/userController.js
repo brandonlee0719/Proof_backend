@@ -192,28 +192,21 @@ const loginUser = async (req, res) => {
     });
   }
   try {
-    const email_exists = await firebaseAdmin.auth.getUserByEmail(email);
-    if (email_exists) {
-      //   const token = await firebaseAdmin.auth.createCustomToken(
-      //     email_exists.uid
-      //   );
-      await signInWithEmailAndPassword(auth, email, password);
-      const userData = await req.app.locals.db
-        .collection("user")
-        .findOne({ email });
-      const payload = {
-        id: userData._id,
-        name: userData.name,
-        email: userData.email,
-        surfingBalance: userData.surfingBalance,
-        advertisingBalance: userData.advertisingBalance
-      };
-      const token = await generateToken(payload);
-      if (token) {
-        return res.status(201).json({ token: token });
-      } else {
-        return res.status(400).json("Unable to generate token");
-      }
+    const db = req.app.locals.db;
+    const user = await db.collection("user").findOne({ email });
+    await signInWithEmailAndPassword(auth, email, password);
+    const payload = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      surfingBalance: user.surfingBalance,
+      advertisingBalance: user.advertisingBalance
+    };
+    const token = await generateToken(payload);
+    if (token) {
+      return res.status(201).json({ token: token });
+    } else {
+      return res.status(400).json("Unable to generate token");
     }
   } catch (error) {
     const message =
