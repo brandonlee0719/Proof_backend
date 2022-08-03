@@ -10,6 +10,10 @@ db(config.MONGO_URI, app);
 
 app.use(cors({ origin: true }));
 app.use(express.json());
+
+app.use('/', function(req, res, next) {
+  res.send('<p>HTML Data</p>');
+});
 app.use("/api/user", router);
 
 app.listen(config.PORT, () =>
