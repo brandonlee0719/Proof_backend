@@ -125,12 +125,11 @@ const registerUser = async (req, res) => {
       // });
     }
   } catch (error) {
-    if (error.code === "auth/email-already-exists") {
-      return res
-        .status(400)
-        .json({ error: `User with email: ${email} already exists` });
-    }
-    return res.status(500).json({ error: error.message });
+    const message =
+      error.code && error.code === "auth/email-already-exists"
+        ? `User with email: ${email} already exists`
+        : error.toString();
+    return res.status(400).json({ error: message });
   }
 };
 
