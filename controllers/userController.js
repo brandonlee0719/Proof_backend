@@ -146,7 +146,16 @@ const regGoogleAuthData = async (req, res) => {
     const userCollection = req.app.locals.db.collection("user");
     const user_exists = await userCollection.findOne({ email });
     if (user_exists) {
-      return res.status(400).json({ error: `User with email: ${email} already exists`})
+      const payload = {
+        id: user_exists._id,
+        name: user_exists.name,
+        email: user_exists.email,
+        surfingBalance: user_exists.surfingBalance,
+        advertisingBalance: user_exists.advertisingBalance
+      };
+      console.log(payload)
+      const token = await generateToken(payload);
+      return res.status(200).json({ token: token })
     } else {
       const user = await userCollection.insertOne({
         email,
