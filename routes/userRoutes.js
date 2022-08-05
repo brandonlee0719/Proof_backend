@@ -3,6 +3,7 @@ import {
   getAllUsers,
   getMe,
   loginUser,
+  regGoogleAuthData,
   registerUser,
   registerWithGoogle,
   resetPassword
@@ -12,6 +13,7 @@ import authenticate from "../middleware/authenticate.js";
 const router = express.Router();
 
 router.post("/signup", registerUser);
+router.post("/regWithGoggleAuth", regGoogleAuthData);
 router.post("/registerWithGoogle", registerWithGoogle);
 router.post("/login", loginUser);
 router.get("/user/:id", getMe);

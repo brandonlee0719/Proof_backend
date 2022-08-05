@@ -47,11 +47,11 @@ const AdsSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-    ref: 'user'
-  }
+  // createdBy: {
+  //   type: mongoose.Schema.Types.ObjectId,
+  //   required: true,
+  //   ref: 'user'
+  // }
 }, {timestamps: true});
 
 export default mongoose.model('Ads', AdsSchema)

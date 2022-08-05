@@ -1,17 +1,5 @@
 import jwt from "jsonwebtoken";
-import Ads from "../models/Ads";
-import jwt from "jsonwebtoken";
-
-function token() {
-  const { authorization } = req.headers;
-  const token = authorization
-    ? authorization.split("Bearer ").length
-      ? authorization.split("Bearer ")[1]
-      : null
-    : null;
-  console.log(token);
-  return token;
-}
+import Ads from "../models/Ads.js";
 
 // create an ad
 const createAd = async (req, res) => {
@@ -25,20 +13,46 @@ const createAd = async (req, res) => {
       deviceToShowAd,
       geoTargeting,
       rated,
-      isShown
+      isShown = false
     } = req.body;
-    const token = token();
+    if (
+      !url ||
+      !description ||
+      !basePrice ||
+      !viewDuration ||
+      !minRatingToViewAd ||
+      !deviceToShowAd ||
+      !geoTargeting ||
+      !rated
+    ) {
+      return res.status(400).json({
+        error:
+          "Please url, description, basePice, viewDuration, minRatingToViewAd, deviceToShowAd, geoTargeting, rated fields are required"
+      });
+    }
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
     if (token) {
       //verify with token
       const user = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("The user", user);
       if (user) {
-        const adCreator = user.id;
-        const userCollection = await req.app.locals.db.collction.findOne({
-          adCreator
+        const adCreator = user.id.id;
+        const email = user.id.email;
+        const db = req.app.locals.db;
+        const userCollection = await db.collection("user").findOne({
+          email
         });
         const userAdvertisingBalance = userCollection.advertisingBalance;
-        isShown = userAdvertisingBalance >= basePrice ? true : false;
-        const ad = await Ads.create({
+        if (userAdvertisingBalance >= basePrice) {
+          isShown = true;
+        }
+        const ad = await db.collection("Ads").insertOne({
           url,
           description,
           basePrice,
@@ -48,9 +62,22 @@ const createAd = async (req, res) => {
           geoTargeting,
           rated,
           isShown,
-          createdBy: adCreator
+          creatorEmail: email
         });
-        return res.status(201).json(ad);
+
+        // const adsData = {
+        //   url: ad.url,
+        //   description: ad.description,
+        //   basePrice: ad.basePrice,
+        //   viewDuration: ad.viewDuration.map((duration) => duration),
+        //   minRatingToViewAd: ad.minRatingToViewAd.map((rating) => rating),
+        //   deviceToShowAd: ad.deviceToShowAd.map((device) => device),
+        //   geoTargeting: ad.geoTargeting.map((geotarget) => geotarget),
+        //   rated: ad.rated,
+        //   isShown: ad.isShown,
+        //   creatorEmail: ad.creatorEmail
+        // };
+        return res.status(201).json({ad});
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }
@@ -62,25 +89,62 @@ const createAd = async (req, res) => {
   }
 };
 
-const getAd = async (req, res) => {
+const getAllAds = async (req, res) => {
   try {
-    const _id = req.params.id
-    const ad = await Ads.findOne({_id})
-    const adAmount = ad.basePrice
-    const adCreator = ad.createdBy
-    const token = token();
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
     if (token) {
       //verify with token
       const user = jwt.verify(token, process.env.JWT_SECRET);
-      const userId = user.id;
-      const userCollection = await req.app.locals.db.collction.findOne({
-        userId
-      })
-      userCollection.surfingBalance += adAmount
-      userCollection.save()
-      adCreator.advertisingBalance -= adAmount
-      ad.save()
-
+      if (user) {
+        const db = req.app.locals.db;
+        const allAds = await db.collection("Ads").find({}).toArray();
+        return res.status(200).json({ allAds });
+      }
     }
-  } catch (error) {}
+  } catch (error) {
+    return res.status(400).json({ error });
+  }
 };
+
+const getAdsCreatedByMe = async (req, res) => {
+  try {
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
+    if (token) {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      if (user) {
+        const email = user.id.email
+        console.log(email)
+        const db = req.app.locals.db;
+        const ads = await db.collection("Ads").find({ creatorEmail: email }).toArray()
+        return res.status(200).json({ads: ads})
+      }
+    }
+  } catch (error) {
+    return res.status(400).json(error.message);
+  }
+}
+
+function token() {
+  const { authorization } = req.headers;
+  const token = authorization
+    ? authorization.split("Bearer ").length
+      ? authorization.split("Bearer ")[1]
+      : null
+    : null;
+  console.log(token);
+  return token;
+}
+
+export { createAd, getAllAds, getAdsCreatedByMe };
