@@ -144,26 +144,31 @@ const regGoogleAuthData = async (req, res) => {
   }
   try {
     const userCollection = req.app.locals.db.collection("user");
-    const user = await userCollection.insertOne({
-      email,
-      name,
-      firebaseId: uid,
-      surfingBalance,
-      advertisingBalance
-    });
-    const newUser = await userCollection.findOne(user._id);
-    const payload = {
-      id: newUser._id,
-      name: newUser.name,
-      email: newUser.email,
-      surfingBalance: newUser.surfingBalance,
-      advertisingBalance: newUser.advertisingBalance
-    };
-    const token = await generateToken(payload);
-    if (token) {
-      return res.status(201).json({ token: token });
+    const user_exists = await userCollection.findOne({ email });
+    if (user_exists) {
+      return res.status(400).json({ error: `User with email: ${email} already exists`})
     } else {
-      return res.status(400).json("Unable to generate token");
+      const user = await userCollection.insertOne({
+        email,
+        name,
+        firebaseId: uid,
+        surfingBalance,
+        advertisingBalance
+      });
+      const newUser = await userCollection.findOne(user._id);
+      const payload = {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        surfingBalance: newUser.surfingBalance,
+        advertisingBalance: newUser.advertisingBalance
+      };
+      const token = await generateToken(payload);
+      if (token) {
+        return res.status(201).json({ token: token });
+      } else {
+        return res.status(400).json("Unable to generate token");
+      }
     }
   } catch (error) {
     const message = error.toString();
