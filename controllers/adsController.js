@@ -56,7 +56,7 @@ const createAd = async (req, res) => {
           email
         });
         const userAdvertisingBalance = userCollection.advertisingBalance;
-        let isShown
+        let isShown;
         if (userAdvertisingBalance >= basePrice) {
           isShown = true;
         }
@@ -198,6 +198,47 @@ const surfAds = async (req, res) => {
   }
 };
 
+const depositSatoshi = async (req, res) => {
+  try {
+    const { amount } = req.body;
+    if (!amount) {
+      return res.status(400).json({
+        error: "Please amount is required"
+      });
+    }
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
+    if (token) {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      if (user) {
+        let email = user.id.email;
+        let db = req.app.locals.db;
+        let userCollection = await db.collection("user").findOne({ email });
+        console.log(userCollection)
+        await db.collection("user").updateOne(
+          { email },
+          {
+            $set: { advertisingBalance: userCollection.advertisingBalance + amount }
+          }
+        );
+        
+        return res.status(200).json({ message: `You advertising balance has been added ${amount} satoshi`})
+      } else {
+        return res.status(400).json({ error: "Verification failed!" });
+      }
+    } else {
+      return res.status(404).json({ error: "Token not found" });
+    }
+  } catch (error) {
+    return res.status(400).json(error.message);
+  }
+};
+
 function token() {
   const { authorization } = req.headers;
   const token = authorization
@@ -209,4 +250,4 @@ function token() {
   return token;
 }
 
-export { createAd, getAllAds, getAdsCreatedByMe, surfAds };
+export { createAd, getAllAds, getAdsCreatedByMe, surfAds, depositSatoshi };
