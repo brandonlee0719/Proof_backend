@@ -12,8 +12,7 @@ const createAd = async (req, res) => {
       minRatingToViewAd,
       deviceToShowAd,
       geoTargeting,
-      rated,
-      isShown = false
+      rated
     } = req.body;
     if (
       !url ||
@@ -28,6 +27,14 @@ const createAd = async (req, res) => {
       return res.status(400).json({
         error:
           "Please url, description, basePice, viewDuration, minRatingToViewAd, deviceToShowAd, geoTargeting, rated fields are required"
+      });
+    }
+    const url_exists = await req.app.locals.db
+      .collection("Ads")
+      .findOne({ url });
+    if (url_exists) {
+      return res.status(400).json({
+        error: `Please Ads with url ${url} already exists. You may want to update it`
       });
     }
     const { authorization } = req.headers;
@@ -49,6 +56,7 @@ const createAd = async (req, res) => {
           email
         });
         const userAdvertisingBalance = userCollection.advertisingBalance;
+        let isShown
         if (userAdvertisingBalance >= basePrice) {
           isShown = true;
         }
@@ -65,19 +73,7 @@ const createAd = async (req, res) => {
           creatorEmail: email
         });
 
-        // const adsData = {
-        //   url: ad.url,
-        //   description: ad.description,
-        //   basePrice: ad.basePrice,
-        //   viewDuration: ad.viewDuration.map((duration) => duration),
-        //   minRatingToViewAd: ad.minRatingToViewAd.map((rating) => rating),
-        //   deviceToShowAd: ad.deviceToShowAd.map((device) => device),
-        //   geoTargeting: ad.geoTargeting.map((geotarget) => geotarget),
-        //   rated: ad.rated,
-        //   isShown: ad.isShown,
-        //   creatorEmail: ad.creatorEmail
-        // };
-        return res.status(201).json({ad});
+        return res.status(201).json({ ad });
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }
@@ -85,7 +81,7 @@ const createAd = async (req, res) => {
       return res.status(404).json({ error: "Token not found" });
     }
   } catch (error) {
-    return res.status(500).json({ error: error });
+    return res.status(500).json({ error: error.message });
   }
 };
 
@@ -124,17 +120,83 @@ const getAdsCreatedByMe = async (req, res) => {
     if (token) {
       const user = jwt.verify(token, process.env.JWT_SECRET);
       if (user) {
-        const email = user.id.email
-        console.log(email)
+        const email = user.id.email;
+        console.log(email);
         const db = req.app.locals.db;
-        const ads = await db.collection("Ads").find({ creatorEmail: email }).toArray()
-        return res.status(200).json({ads: ads})
+        const ads = await db
+          .collection("Ads")
+          .find({ creatorEmail: email })
+          .toArray();
+        return res.status(200).json({ ads: ads });
       }
     }
   } catch (error) {
     return res.status(400).json(error.message);
   }
-}
+};
+
+const surfAds = async (req, res) => {
+  try {
+    const { url } = req.body;
+    if (!url) {
+      return res.status(400).json({
+        error: "Please url is required"
+      });
+    }
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
+    if (token) {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      if (user) {
+        let surferEmail = user.id.email;
+        console.log(surferEmail);
+        let db = req.app.locals.db;
+        let surfer = await db
+          .collection("user")
+          .findOne({ email: surferEmail });
+        console.log("the surfer", surfer);
+        let ads = await db.collection("Ads").findOne({ url });
+        console.log("the ads", ads);
+        let adsCreatorEmail = ads.creatorEmail;
+        let adsCreator = await db
+          .collection("user")
+          .findOne({ email: adsCreatorEmail });
+        console.log("adsCreator", adsCreator);
+
+        await db.collection("user").updateOne(
+          { email: surferEmail },
+          {
+            $set: { surfingBalance: surfer.surfingBalance + ads.basePrice }
+          }
+        );
+
+        await db.collection("user").updateOne(
+          { email: adsCreatorEmail },
+          {
+            $set: {
+              advertisingBalance: adsCreator.advertisingBalance - ads.basePrice
+            }
+          }
+        );
+
+        return res.status(200).json({
+          message: `Ads with link: ${url} has been successfully surfed`
+        });
+      } else {
+        return res.status(400).json({ error: "Verification failed!" });
+      }
+    } else {
+      return res.status(404).json({ error: "Token not found" });
+    }
+  } catch (error) {
+    return res.status(400).json(error.message);
+  }
+};
 
 function token() {
   const { authorization } = req.headers;
@@ -147,4 +209,4 @@ function token() {
   return token;
 }
 
-export { createAd, getAllAds, getAdsCreatedByMe };
+export { createAd, getAllAds, getAdsCreatedByMe, surfAds };
