@@ -27,30 +27,7 @@ const db = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
 
 const getMe = async (req, res) => {
-  const _id = req.params.id;
-  const { authorization } = req.headers;
-  const token = authorization
-    ? authorization.split("Bearer ").length
-      ? authorization.split("Bearer ")[1]
-      : null
-    : null;
-  console.log(token);
-
-  if (token) {
-    const user = jwt.verify(token, process.env.JWT_SECRET);
-    if (_id === user.id.id) {
-      return res.status(200).json({ user: user.id });
-    } else {
-      return res.status(400).json("User not found");
-    }
-  } else {
-    return res.status(500).json({ error: "Token not found" });
-  }
-};
-
-const getAllUsers = async (req, res) => {
   try {
-    const _id = req.params.id;
     const { authorization } = req.headers;
     const token = authorization
       ? authorization.split("Bearer ").length
@@ -60,12 +37,37 @@ const getAllUsers = async (req, res) => {
     console.log(token);
     if (token) {
       const user = jwt.verify(token, process.env.JWT_SECRET);
-      if (_id === user.id.id) {
+      if (user) {
+        const email = user.id.email;
         const db = req.app.locals.db;
-        const users = await db.collection("user").find({}).toArray();
-        if (users) {
-          return res.status(200).json(users);
-        }
+        const userCollection = await db.collection("user").findOne({ email });
+        console.log(userCollection);
+        return res.status(200).json({ user: userCollection });
+      }
+    } else {
+      return res.status(500).json({ error: "Token not found" });
+    }
+  } catch (error) {
+    const message = error.toString();
+    return res.status(400).json({ error: message });
+  }
+};
+
+const getAllUsers = async (req, res) => {
+  try {
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
+    if (token) {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      if (user) {
+        const db = req.app.locals.db
+        const allUsers = await db.collection("user").find({}).toArray()
+        return res.status(200).json({ users: allUsers })
       }
     }
   } catch (error) {
@@ -153,9 +155,9 @@ const regGoogleAuthData = async (req, res) => {
         surfingBalance: user_exists.surfingBalance,
         advertisingBalance: user_exists.advertisingBalance
       };
-      console.log(payload)
+      console.log(payload);
       const token = await generateToken(payload);
-      return res.status(200).json({ token: token })
+      return res.status(200).json({ token: token });
     } else {
       const user = await userCollection.insertOne({
         email,

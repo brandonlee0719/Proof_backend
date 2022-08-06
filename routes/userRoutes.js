@@ -16,8 +16,8 @@ router.post("/signup", registerUser);
 router.post("/regWithGoggleAuth", regGoogleAuthData);
 router.post("/registerWithGoogle", registerWithGoogle);
 router.post("/login", loginUser);
-router.get("/user/:id", getMe);
-router.get("/users/:id", getAllUsers);
+router.get("/user", getMe);
+router.get("/users", getAllUsers);
 router.post("/resetpassword", resetPassword);
 
 export default router;
