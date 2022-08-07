@@ -168,25 +168,72 @@ const surfAds = async (req, res) => {
           .findOne({ email: adsCreatorEmail });
         console.log("adsCreator", adsCreator);
 
-        await db.collection("user").updateOne(
-          { email: surferEmail },
-          {
-            $set: { surfingBalance: surfer.surfingBalance + ads.basePrice }
-          }
+        var currentDate = new Date();
+        var timeToSurf = currentDate.setSeconds(
+          currentDate.getSeconds() + ads.viewDuration
         );
+        var deadline = new Date(timeToSurf).getTime();
 
-        await db.collection("user").updateOne(
-          { email: adsCreatorEmail },
-          {
-            $set: {
-              advertisingBalance: adsCreator.advertisingBalance - ads.basePrice
-            }
+        var x = setInterval(function() {
+          var now = new Date().getTime();
+          var t = deadline - now;
+          var seconds = Math.floor(t % (1000 * 60) / 1000);
+          console.log(`${seconds}s`);
+          if (t < 0) {
+            clearInterval(x);
+            console.log("time elapsed");
+            db.collection("user").updateOne(
+              { email: surferEmail },
+              {
+                $set: {
+                  surfingBalance: `${ads.viewDuration === 60
+                    ? Number(surfer.surfingBalance) + Number(ads.basePrice) + 30
+                    : ads.viewDuration === 40
+                      ? Number(surfer.surfingBalance) +
+                        Number(ads.basePrice) +
+                        15
+                      : ads.viewDuration === 30
+                        ? Number(surfer.surfingBalance) +
+                          Number(ads.basePrice) +
+                          10
+                        : Number(surfer.surfingBalance) +
+                          Number(ads.basePrice)}`
+                }
+              }
+            );
+
+            db.collection("user").updateOne(
+              { email: adsCreatorEmail },
+              {
+                $set: {
+                  advertisingBalance: `${ads.viewDuration === 60
+                    ? Number(adsCreator.advertisingBalance) -
+                      Number(ads.basePrice) -
+                      30
+                    : ads.viewDuration === 40
+                      ? Number(adsCreator.advertisingBalance) -
+                        Number(ads.basePrice) -
+                        15
+                      : ads.viewDuration === 30
+                        ? Number(adsCreator.advertisingBalance) -
+                          Number(ads.basePrice) -
+                          10
+                        : Number(adsCreator.advertisingBalance) -
+                          Number(ads.basePrice)}`
+                }
+              }
+            );
+            return res.status(200).json({
+              message: `You have earned ${ads.viewDuration === 60
+                ? ads.basePrice + 30
+                : ads.viewDuration === 40
+                  ? ads.basePrice + 15
+                  : ads.viewDuration === 30
+                    ? ads.basePrice + 10
+                    : ads.basePrice} satoshi`
+            });
           }
-        );
-
-        return res.status(200).json({
-          message: `Ads with link: ${url} has been successfully surfed`
-        });
+        }, 1000);
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }
@@ -219,15 +266,19 @@ const depositSatoshi = async (req, res) => {
         let email = user.id.email;
         let db = req.app.locals.db;
         let userCollection = await db.collection("user").findOne({ email });
-        console.log(userCollection)
+        console.log(userCollection);
         await db.collection("user").updateOne(
           { email },
           {
-            $set: { advertisingBalance: userCollection.advertisingBalance + amount }
+            $set: {
+              advertisingBalance: userCollection.advertisingBalance + amount
+            }
           }
         );
-        
-        return res.status(200).json({ message: `You advertising balance has been added ${amount} satoshi`})
+
+        return res.status(200).json({
+          message: `You advertising balance has been added ${amount} satoshi`
+        });
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }
