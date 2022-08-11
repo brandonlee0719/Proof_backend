@@ -39,10 +39,19 @@ const getMe = async (req, res) => {
       const user = jwt.verify(token, process.env.JWT_SECRET);
       if (user) {
         const email = user.id.email;
+        const name = user.id.name;
         const db = req.app.locals.db;
         const userCollection = await db.collection("user").findOne({ email });
         console.log(userCollection);
-        return res.status(200).json({ user: userCollection });
+        const escrowCollection = await db
+          .collection("Escrow")
+          .findOne({ nameOfUser: name });
+          console.log("escrow collection", escrowCollection)
+        const userData = {
+          ...userCollection,
+          advertisingBalance: escrowCollection.amountForUrlAdvert
+        };
+        return res.status(200).json({ user: userData });
       }
     } else {
       return res.status(500).json({ error: "Token not found" });
@@ -65,9 +74,9 @@ const getAllUsers = async (req, res) => {
     if (token) {
       const user = jwt.verify(token, process.env.JWT_SECRET);
       if (user) {
-        const db = req.app.locals.db
-        const allUsers = await db.collection("user").find({}).toArray()
-        return res.status(200).json({ users: allUsers })
+        const db = req.app.locals.db;
+        const allUsers = await db.collection("user").find({}).toArray();
+        return res.status(200).json({ users: allUsers });
       }
     }
   } catch (error) {
