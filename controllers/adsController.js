@@ -12,7 +12,8 @@ const createAd = async (req, res) => {
       minRatingToViewAd,
       deviceToShowAd,
       geoTargeting,
-      rated
+      rated,
+      isPublished = false
     } = req.body;
     if (
       !url ||
@@ -49,17 +50,9 @@ const createAd = async (req, res) => {
       const user = jwt.verify(token, process.env.JWT_SECRET);
       console.log("The user", user);
       if (user) {
-        const adCreator = user.id.id;
         const email = user.id.email;
         const db = req.app.locals.db;
-        const userCollection = await db.collection("user").findOne({
-          email
-        });
-        const userAdvertisingBalance = userCollection.advertisingBalance;
-        let isShown;
-        if (userAdvertisingBalance >= basePrice) {
-          isShown = true;
-        }
+
         const ad = await db.collection("Ads").insertOne({
           url,
           description,
@@ -69,7 +62,7 @@ const createAd = async (req, res) => {
           deviceToShowAd,
           geoTargeting,
           rated,
-          isShown,
+          isPublished,
           creatorEmail: email
         });
 
@@ -85,7 +78,7 @@ const createAd = async (req, res) => {
   }
 };
 
-const getAllAds = async (req, res) => {
+const getPublisedAds = async (req, res) => {
   try {
     const { authorization } = req.headers;
     const token = authorization
@@ -99,7 +92,10 @@ const getAllAds = async (req, res) => {
       const user = jwt.verify(token, process.env.JWT_SECRET);
       if (user) {
         const db = req.app.locals.db;
-        const allAds = await db.collection("Ads").find({}).toArray();
+        const allAds = await db
+          .collection("Ads")
+          .find({ isPublished: true })
+          .toArray();
         return res.status(200).json({ allAds });
       }
     }
@@ -168,72 +164,129 @@ const surfAds = async (req, res) => {
           .findOne({ email: adsCreatorEmail });
         console.log("adsCreator", adsCreator);
 
-        var currentDate = new Date();
-        var timeToSurf = currentDate.setSeconds(
-          currentDate.getSeconds() + ads.viewDuration
-        );
-        var deadline = new Date(timeToSurf).getTime();
+        const adsCreatorName = adsCreator.name;
+        const escrowCollection = await db
+          .collection("Escrow")
+          .findOne({ nameOfUser: adsCreatorName });
+        const amountForAdvert = escrowCollection.amountForUrlAdvert;
+        const nameofAdvertiser = escrowCollection.nameOfUser;
+        console.log("amount for advert", amountForAdvert);
 
-        var x = setInterval(function() {
-          var now = new Date().getTime();
-          var t = deadline - now;
-          var seconds = Math.floor(t % (1000 * 60) / 1000);
-          console.log(`${seconds}s`);
-          if (t < 0) {
-            clearInterval(x);
-            console.log("time elapsed");
-            db.collection("user").updateOne(
-              { email: surferEmail },
-              {
-                $set: {
-                  surfingBalance: `${ads.viewDuration === 60
-                    ? Number(surfer.surfingBalance) + Number(ads.basePrice) + 30
-                    : ads.viewDuration === 40
+        // check if amount for advert is enough to sustain the surfing of the advert
+        const isGreater =
+          amountForAdvert >
+          (ads.viewDuration === 60
+            ? Number(ads.basePrice) + 30
+            : ads.viewDuration === 40
+              ? Number(ads.basePrice) + 15
+              : ads.viewDuration === 30
+                ? Number(ads.basePrice) + 10
+                : Number(ads.basePrice));
+
+        console.log("is greater", isGreater);
+
+        if (isGreater) {
+          var currentDate = new Date();
+          var timeToSurf = currentDate.setSeconds(
+            currentDate.getSeconds() + ads.viewDuration
+          );
+          var deadline = new Date(timeToSurf).getTime();
+
+          var x = setInterval(function() {
+            var now = new Date().getTime();
+            var t = deadline - now;
+            var seconds = Math.floor(t % (1000 * 60) / 1000);
+            console.log(`${seconds}s`);
+            if (t < 0) {
+              clearInterval(x);
+              console.log("time elapsed");
+              db.collection("user").updateOne(
+                { email: surferEmail },
+                {
+                  $set: {
+                    surfingBalance: `${ads.viewDuration === 60
                       ? Number(surfer.surfingBalance) +
                         Number(ads.basePrice) +
-                        15
-                      : ads.viewDuration === 30
+                        30
+                      : ads.viewDuration === 40
                         ? Number(surfer.surfingBalance) +
                           Number(ads.basePrice) +
-                          10
-                        : Number(surfer.surfingBalance) +
-                          Number(ads.basePrice)}`
+                          15
+                        : ads.viewDuration === 30
+                          ? Number(surfer.surfingBalance) +
+                            Number(ads.basePrice) +
+                            10
+                          : Number(surfer.surfingBalance) +
+                            Number(ads.basePrice)}`
+                  }
                 }
-              }
-            );
+              );
 
-            db.collection("user").updateOne(
-              { email: adsCreatorEmail },
-              {
-                $set: {
-                  advertisingBalance: `${ads.viewDuration === 60
-                    ? Number(adsCreator.advertisingBalance) -
-                      Number(ads.basePrice) -
-                      30
-                    : ads.viewDuration === 40
-                      ? Number(adsCreator.advertisingBalance) -
+              db.collection("Escrow").updateOne(
+                { nameOfUser: nameofAdvertiser },
+                {
+                  $set: {
+                    amountForUrlAdvert: `${ads.viewDuration === 60
+                      ? Number(escrowCollection.amountForUrlAdvert) -
                         Number(ads.basePrice) -
-                        15
-                      : ads.viewDuration === 30
-                        ? Number(adsCreator.advertisingBalance) -
+                        30
+                      : ads.viewDuration === 40
+                        ? Number(escrowCollection.amountForUrlAdvert) -
                           Number(ads.basePrice) -
-                          10
-                        : Number(adsCreator.advertisingBalance) -
-                          Number(ads.basePrice)}`
+                          15
+                        : ads.viewDuration === 30
+                          ? Number(escrowCollection.amountForUrlAdvert) -
+                            Number(ads.basePrice) -
+                            10
+                          : Number(escrowCollection.amountForUrlAdvert) -
+                            Number(ads.basePrice)}`
+                  }
                 }
+              );
+
+              const newEscrowCollection = db
+                .collection("Escrow")
+                .findOne({ nameOfUser: adsCreatorName });
+              const newAmountForUrlAdvert = newEscrowCollection.amountForUrlAdvert;
+
+              // check whether the advertiser still has enough satoshi for this advert
+              const enoughSatoshi =
+                newAmountForUrlAdvert >
+                (ads.viewDuration === 60
+                  ? Number(ads.basePrice) + 30
+                  : ads.viewDuration === 40
+                    ? Number(ads.basePrice) + 15
+                    : ads.viewDuration === 30
+                      ? Number(ads.basePrice) + 10
+                      : Number(ads.basePrice));
+
+              if (enoughSatoshi === false) {
+                db.collection("Ads").updateOne(
+                  { creatorEmail: adsCreatorEmail },
+                  {
+                    $set: {
+                      isPublished: false
+                    }
+                  }
+                );
               }
-            );
-            return res.status(200).json({
-              message: `You have earned ${ads.viewDuration === 60
-                ? ads.basePrice + 30
-                : ads.viewDuration === 40
-                  ? ads.basePrice + 15
-                  : ads.viewDuration === 30
-                    ? ads.basePrice + 10
-                    : ads.basePrice} satoshi`
-            });
-          }
-        }, 1000);
+
+              return res.status(200).json({
+                message: `You have earned ${ads.viewDuration === 60
+                  ? ads.basePrice + 30
+                  : ads.viewDuration === 40
+                    ? ads.basePrice + 15
+                    : ads.viewDuration === 30
+                      ? ads.basePrice + 10
+                      : ads.basePrice} satoshi`
+              });
+            }
+          }, 1000);
+        } else {
+          return res.status(400).json({
+            error: "You cannot surf this add as you don't have enough satoshi"
+          });
+        }
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }
@@ -254,6 +307,11 @@ const depositSatoshi = async (req, res) => {
         error: "Please amount is required"
       });
     }
+    if (amount < 100) {
+      return res.status(400).json({
+        error: "Please amount to be deposited must be a minimum of 100 satoshi"
+      });
+    }
     const { authorization } = req.headers;
     const token = authorization
       ? authorization.split("Bearer ").length
@@ -264,22 +322,42 @@ const depositSatoshi = async (req, res) => {
     if (token) {
       const user = jwt.verify(token, process.env.JWT_SECRET);
       if (user) {
+        let name = user.id.name;
         let email = user.id.email;
         let db = req.app.locals.db;
-        let userCollection = await db.collection("user").findOne({ email });
-        console.log(userCollection);
-        await db.collection("user").updateOne(
-          { email },
-          {
-            $set: {
-              advertisingBalance: userCollection.advertisingBalance + amount
-            }
-          }
-        );
+        let adsCollection = await db
+          .collection("Ads")
+          .findOne({ creatorEmail: email });
+        console.log("the ads collection", adsCollection);
+        let adsUrl = adsCollection.url;
 
-        return res.status(200).json({
-          message: `You advertising balance has been added ${amount} satoshi`
+        const escrow = await db.collection("Escrow").insertOne({
+          nameOfUser: name,
+          adsUrl,
+          amountForUrlAdvert: amount
         });
+        console.log("the escrow", escrow);
+
+        const escrowCollection = await db
+          .collection("Escrow")
+          .findOne({ nameOfUser: name });
+        const amountFromEscrow = escrowCollection.amountForUrlAdvert;
+        console.log("amount from escrow", amountFromEscrow);
+
+        if (amountFromEscrow > 100) {
+          await db.collection("Ads").updateOne(
+            { creatorEmail: email },
+            {
+              $set: {
+                isPublished: true
+              }
+            }
+          );
+
+          return res.status(201).json({
+            message: `Amount of ${amount} Satoshi has been deducted from your Satoshi balance and moved into your Escrow for surfing your advert with url: ${adsUrl}`
+          });
+        }
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }
@@ -302,4 +380,4 @@ function token() {
   return token;
 }
 
-export { createAd, getAllAds, getAdsCreatedByMe, surfAds, depositSatoshi };
+export { createAd, getPublisedAds, getAdsCreatedByMe, surfAds, depositSatoshi };
