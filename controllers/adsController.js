@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
-import Ads from "../models/Ads.js";
+import mongoose from "mongoose";
+const { ObjectId } = mongoose.Types;
 
 // create an ad
 const createAd = async (req, res) => {
@@ -13,7 +14,8 @@ const createAd = async (req, res) => {
       deviceToShowAd,
       geoTargeting,
       rated,
-      isPublished = false
+      isPublished = false,
+      escrowAmount = 0
     } = req.body;
     if (
       !url ||
@@ -63,6 +65,7 @@ const createAd = async (req, res) => {
           geoTargeting,
           rated,
           isPublished,
+          escrowAmount,
           creatorEmail: email
         });
 
@@ -133,10 +136,13 @@ const getAdsCreatedByMe = async (req, res) => {
 
 const surfAds = async (req, res) => {
   try {
-    const { url } = req.body;
-    if (!url) {
+    const _id = req.params.id;
+    const db = req.app.locals.db;
+    const ads = await db.collection("Ads").findOne({ _id: ObjectId(_id) });
+
+    if (!ads) {
       return res.status(400).json({
-        error: "Please url is required"
+        error: `Ads with id ${_id} does not exist`
       });
     }
     const { authorization } = req.headers;
@@ -151,28 +157,19 @@ const surfAds = async (req, res) => {
       if (user) {
         let surferEmail = user.id.email;
         console.log(surferEmail);
-        let db = req.app.locals.db;
         let surfer = await db
           .collection("user")
           .findOne({ email: surferEmail });
         console.log("the surfer", surfer);
-        let ads = await db.collection("Ads").findOne({ url });
-        console.log("the ads", ads);
+
         let adsCreatorEmail = ads.creatorEmail;
         let adsCreator = await db
           .collection("user")
           .findOne({ email: adsCreatorEmail });
         console.log("adsCreator", adsCreator);
 
-        const adsCreatorName = adsCreator.name;
-        const escrowCollection = await db
-          .collection("Escrow")
-          .findOne({ nameOfUser: adsCreatorName });
-        const amountForAdvert = escrowCollection.amountForUrlAdvert;
-        const nameofAdvertiser = escrowCollection.nameOfUser;
-        console.log("amount for advert", amountForAdvert);
-
         // check if amount for advert is enough to sustain the surfing of the advert
+        const amountForAdvert = ads.escrowAmount;
         const isGreater =
           amountForAdvert >
           (ads.viewDuration === 60
@@ -222,45 +219,41 @@ const surfAds = async (req, res) => {
                 }
               );
 
-              db.collection("Escrow").updateOne(
-                { nameOfUser: nameofAdvertiser },
+              db.collection("Ads").updateOne(
+                { creatorEmail: adsCreatorEmail },
                 {
                   $set: {
-                    amountForUrlAdvert: `${ads.viewDuration === 60
-                      ? Number(escrowCollection.amountForUrlAdvert) -
-                        Number(ads.basePrice) -
-                        30
+                    escrowAmount: `${ads.viewDuration === 60
+                      ? Number(ads.escrowAmount) - Number(ads.basePrice) - 30
                       : ads.viewDuration === 40
-                        ? Number(escrowCollection.amountForUrlAdvert) -
-                          Number(ads.basePrice) -
-                          15
+                        ? Number(ads.escrowAmount) - Number(ads.basePrice) - 15
                         : ads.viewDuration === 30
-                          ? Number(escrowCollection.amountForUrlAdvert) -
+                          ? Number(ads.escrowAmount) -
                             Number(ads.basePrice) -
                             10
-                          : Number(escrowCollection.amountForUrlAdvert) -
-                            Number(ads.basePrice)}`
+                          : Number(ads.escrowAmount) - Number(ads.basePrice)}`
                   }
                 }
               );
 
-              const newEscrowCollection = db
-                .collection("Escrow")
-                .findOne({ nameOfUser: adsCreatorName });
-              const newAmountForUrlAdvert = newEscrowCollection.amountForUrlAdvert;
+              const newAdsCollection = db
+                .collection("Ads")
+                .findOne({ creatorEmail: adsCreatorEmail });
 
               // check whether the advertiser still has enough satoshi for this advert
               const enoughSatoshi =
-                newAmountForUrlAdvert >
-                (ads.viewDuration === 60
-                  ? Number(ads.basePrice) + 30
-                  : ads.viewDuration === 40
-                    ? Number(ads.basePrice) + 15
-                    : ads.viewDuration === 30
-                      ? Number(ads.basePrice) + 10
-                      : Number(ads.basePrice));
+                newAdsCollection.escrowAmount >
+                (newAdsCollection.viewDuration === 60
+                  ? Number(newAdsCollection.basePrice) + 30
+                  : newAdsCollection.viewDuration === 40
+                    ? Number(newAdsCollection.basePrice) + 15
+                    : newAdsCollection.viewDuration === 30
+                      ? Number(newAdsCollection.basePrice) + 10
+                      : Number(newAdsCollection.basePrice));
 
-              if (enoughSatoshi === false) {
+              console.log("enough satoshi", enoughSatoshi);
+
+              if (enoughSatoshi) {
                 db.collection("Ads").updateOne(
                   { creatorEmail: adsCreatorEmail },
                   {
@@ -322,42 +315,26 @@ const depositSatoshi = async (req, res) => {
     if (token) {
       const user = jwt.verify(token, process.env.JWT_SECRET);
       if (user) {
-        let name = user.id.name;
         let email = user.id.email;
         let db = req.app.locals.db;
         let adsCollection = await db
           .collection("Ads")
           .findOne({ creatorEmail: email });
-        console.log("the ads collection", adsCollection);
-        let adsUrl = adsCollection.url;
+        console.log("ads collection", adsCollection);
 
-        const escrow = await db.collection("Escrow").insertOne({
-          nameOfUser: name,
-          adsUrl,
-          amountForUrlAdvert: amount
-        });
-        console.log("the escrow", escrow);
-
-        const escrowCollection = await db
-          .collection("Escrow")
-          .findOne({ nameOfUser: name });
-        const amountFromEscrow = escrowCollection.amountForUrlAdvert;
-        console.log("amount from escrow", amountFromEscrow);
-
-        if (amountFromEscrow > 100) {
-          await db.collection("Ads").updateOne(
-            { creatorEmail: email },
-            {
-              $set: {
-                isPublished: true
-              }
+        await db.collection("Ads").updateOne(
+          { creatorEmail: email },
+          {
+            $set: {
+              escrowAmount: adsCollection.escrowAmount + Number(amount),
+              isPublished: true
             }
-          );
+          }
+        );
 
-          return res.status(201).json({
-            message: `Amount of ${amount} Satoshi has been deducted from your Satoshi balance and moved into your Escrow for surfing your advert with url: ${adsUrl}`
-          });
-        }
+        return res.status(201).json({
+          message: `Amount of ${amount} Satoshi has been deducted from your Satoshi balance and added to your escrow amount`
+        });
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }

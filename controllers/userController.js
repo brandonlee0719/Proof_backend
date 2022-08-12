@@ -43,13 +43,13 @@ const getMe = async (req, res) => {
         const db = req.app.locals.db;
         const userCollection = await db.collection("user").findOne({ email });
         console.log(userCollection);
-        const escrowCollection = await db
-          .collection("Escrow")
-          .findOne({ nameOfUser: name });
-          console.log("escrow collection", escrowCollection)
+        const adsCollection = await db
+          .collection("Ads")
+          .findOne({ creatorEmail: email });
+          console.log("ads collection", adsCollection)
         const userData = {
           ...userCollection,
-          advertisingBalance: escrowCollection.amountForUrlAdvert
+          advertisingBalance: adsCollection.escrowAmount ? adsCollection.escrowAmount : 0
         };
         return res.status(200).json({ user: userData });
       }
