@@ -240,6 +240,25 @@ const surfAds = async (req, res) => {
                 .collection("Ads")
                 .findOne({ creatorEmail: adsCreatorEmail });
 
+              console.log("new ads collection", newAdsCollection);
+
+              db.collection("user").updateOne(
+                { email: adsCreatorEmail },
+                {
+                  $set: {
+                    advertisingBalance: `${ads.viewDuration === 60
+                      ? Number(ads.escrowAmount) - Number(ads.basePrice) - 30
+                      : ads.viewDuration === 40
+                        ? Number(ads.escrowAmount) - Number(ads.basePrice) - 15
+                        : ads.viewDuration === 30
+                          ? Number(ads.escrowAmount) -
+                            Number(ads.basePrice) -
+                            10
+                          : Number(ads.escrowAmount) - Number(ads.basePrice)}`
+                  }
+                }
+              );
+
               // check whether the advertiser still has enough satoshi for this advert
               const enoughSatoshi =
                 newAdsCollection.escrowAmount >
@@ -322,12 +341,25 @@ const depositSatoshi = async (req, res) => {
           .findOne({ creatorEmail: email });
         console.log("ads collection", adsCollection);
 
+        let userCollection = await db.collection("user").findOne({ email });
+        console.log("ads collection", userCollection);
+
         await db.collection("Ads").updateOne(
           { creatorEmail: email },
           {
             $set: {
               escrowAmount: adsCollection.escrowAmount + Number(amount),
               isPublished: true
+            }
+          }
+        );
+
+        await db.collection("user").updateOne(
+          { email },
+          {
+            $set: {
+              advertisingBalance:
+                userCollection.advertisingBalance + Number(amount)
             }
           }
         );
