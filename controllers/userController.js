@@ -42,16 +42,7 @@ const getMe = async (req, res) => {
         const name = user.id.name;
         const db = req.app.locals.db;
         const userCollection = await db.collection("user").findOne({ email });
-        console.log(userCollection);
-        const adsCollection = await db
-          .collection("Ads")
-          .findOne({ creatorEmail: email });
-          console.log("ads collection", adsCollection)
-        const userData = {
-          ...userCollection,
-          advertisingBalance: adsCollection.escrowAmount ? adsCollection.escrowAmount : 0
-        };
-        return res.status(200).json({ user: userData });
+        return res.status(200).json({ user: userCollection });
       }
     } else {
       return res.status(500).json({ error: "Token not found" });
