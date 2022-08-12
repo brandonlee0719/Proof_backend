@@ -253,7 +253,7 @@ const surfAds = async (req, res) => {
 
               console.log("enough satoshi", enoughSatoshi);
 
-              if (!enoughSatoshi) {
+              if (enoughSatoshi) {
                 db.collection("Ads").updateOne(
                   { creatorEmail: adsCreatorEmail },
                   {
