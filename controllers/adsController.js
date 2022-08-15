@@ -314,7 +314,7 @@ const surfAds = async (req, res) => {
 const depositSatoshi = async (req, res) => {
   try {
     const _id = req.params.id;
-    const amount = req.query.amount
+    const amount = req.query.amount;
     const db = req.app.locals.db;
     const ads = await db.collection("Ads").findOne({ _id: ObjectId(_id) });
 
@@ -383,6 +383,59 @@ const depositSatoshi = async (req, res) => {
   }
 };
 
+const deleteAds = async (req, res) => {
+  try {
+    const _id = req.params.id;
+    let db = req.app.locals.db;
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
+    if (token) {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      if (user) {
+        let email = user.id.email;
+        let userCollection = await db.collection("user").findOne({ email });
+        // check if the user is the creator of the ads
+        let ads = await db.collection("Ads").findOne({ _id: ObjectId(_id) });
+        let adsEscrowAmount = ads.escrowAmount;
+        if (ads.creatorEmail === email) {
+          // user is the creator of the ads, execute delete operation
+          let deletedAds = await db
+            .collection("Ads")
+            .deleteOne({ _id: ObjectId(_id) });
+          if (deletedAds.deletedCount === 1) {
+            // remove the escrowAmount from the advertising balance of the user
+            await db.collection("user").updateOne(
+              { email },
+              {
+                $set: {
+                  advertisingBalance:
+                    Number(userCollection.advertisingBalance) -
+                    Number(adsEscrowAmount)
+                }
+              }
+            );
+            return res.status(201).json({
+              message: `Ads with url ${ads.url} has been successfully deleted`
+            });
+          }
+        }
+      } else {
+        return res.status(400).json({ error: "Verification failed!" });
+      }
+    } else {
+      return res.status(404).json({ error: "Token not found" });
+    }
+  } catch (error) {
+    const message = error.toString();
+    return res.status(400).json({ error: message });
+  }
+};
+
 function token() {
   const { authorization } = req.headers;
   const token = authorization
@@ -394,4 +447,11 @@ function token() {
   return token;
 }
 
-export { createAd, getPublisedAds, getAdsCreatedByMe, surfAds, depositSatoshi };
+export {
+  createAd,
+  getPublisedAds,
+  getAdsCreatedByMe,
+  surfAds,
+  depositSatoshi,
+  deleteAds
+};
