@@ -313,7 +313,17 @@ const surfAds = async (req, res) => {
 
 const depositSatoshi = async (req, res) => {
   try {
-    const { amount } = req.body;
+    const _id = req.params.id;
+    const amount = req.query.amount
+    const db = req.app.locals.db;
+    const ads = await db.collection("Ads").findOne({ _id: ObjectId(_id) });
+
+    if (!ads) {
+      return res.status(400).json({
+        error: `Ads with id ${_id} does not exist`
+      });
+    }
+    // const { amount } = req.body;
     if (!amount) {
       return res.status(400).json({
         error: "Please amount is required"
@@ -335,20 +345,14 @@ const depositSatoshi = async (req, res) => {
       const user = jwt.verify(token, process.env.JWT_SECRET);
       if (user) {
         let email = user.id.email;
-        let db = req.app.locals.db;
-        let adsCollection = await db
-          .collection("Ads")
-          .findOne({ creatorEmail: email });
-        console.log("ads collection", adsCollection);
-
         let userCollection = await db.collection("user").findOne({ email });
         console.log("ads collection", userCollection);
 
         await db.collection("Ads").updateOne(
-          { creatorEmail: email },
+          { _id: ObjectId(_id) },
           {
             $set: {
-              escrowAmount: adsCollection.escrowAmount + Number(amount),
+              escrowAmount: Number(ads.escrowAmount) + Number(amount),
               isPublished: true
             }
           }
@@ -359,7 +363,7 @@ const depositSatoshi = async (req, res) => {
           {
             $set: {
               advertisingBalance:
-                userCollection.advertisingBalance + Number(amount)
+                Number(userCollection.advertisingBalance) + Number(amount)
             }
           }
         );
@@ -374,7 +378,8 @@ const depositSatoshi = async (req, res) => {
       return res.status(404).json({ error: "Token not found" });
     }
   } catch (error) {
-    return res.status(400).json(error.message);
+    const message = error.toString();
+    return res.status(400).json({ error: message });
   }
 };
 
