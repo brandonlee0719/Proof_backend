@@ -7,6 +7,6 @@ router.post("/createAds", createAd)
 router.get("/getAllAds", getPublisedAds)
 router.get("/getMyAds", getAdsCreatedByMe)
 router.get("/surfAds/:id", surfAds)
-router.post("/depositSatoshi", depositSatoshi)
+router.get("/depositSatoshi/:id", depositSatoshi)
 
 export default router;
