@@ -311,6 +311,89 @@ const surfAds = async (req, res) => {
   }
 };
 
+const updateAd = async (req, res) => {
+  try {
+    const _id = req.params.id;
+    const db = req.app.locals.db;
+    let ads_exists = await db.collection("Ads").findOne({ _id: ObjectId(_id) });
+    console.log(ads_exists);
+
+    const {
+      url,
+      description,
+      basePrice,
+      viewDuration,
+      minRatingToViewAd,
+      deviceToShowAd,
+      geoTargeting,
+      rated
+    } = req.body;
+
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
+
+    if (token) {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      let email = user.id.email;
+      if (user) {
+        if (ads_exists) {
+          // check if the user is the creator of the ads and then update ads
+          if (email === ads_exists.creatorEmail) {
+            await db.collection("Ads").updateOne(
+              { _id: ObjectId(_id) },
+              {
+                $set: {
+                  url: url ? url : ads_exists.url,
+                  description: description
+                    ? description
+                    : ads_exists.description,
+                  basePrice: basePrice ? basePrice : ads_exists.basePrice,
+                  viewDuration: viewDuration
+                    ? viewDuration
+                    : ads_exists.viewDuration,
+                  minRatingToViewAd: minRatingToViewAd
+                    ? minRatingToViewAd
+                    : ads_exists.minRatingToViewAd,
+                  deviceToShowAd: deviceToShowAd
+                    ? deviceToShowAd
+                    : ads_exists.deviceToShowAd,
+                  geoTargeting: geoTargeting
+                    ? geoTargeting
+                    : ads_exists.geoTargeting,
+                  rated: rated ? rated : ads_exists.rated
+                }
+              }
+            );
+            return res.status(200).json({
+              message: `Ads with advertisement ${ads_exists.url} has been successfully updated`
+            });
+          } else {
+            return res.status(400).json({
+              error: "You cannot edit this ads as you are not the owner"
+            });
+          }
+        } else {
+          return res
+            .status(400)
+            .json({ error: `Ads with id ${_id} does not exists` });
+        }
+      } else {
+        return res.status(400).json({ error: "Verification failed!" });
+      }
+    } else {
+      return res.status(404).json({ error: "Token not found" });
+    }
+  } catch (error) {
+    const message = error.toString();
+    return res.status(400).json({ error: message });
+  }
+};
+
 const depositSatoshi = async (req, res) => {
   try {
     const _id = req.params.id;
@@ -453,5 +536,6 @@ export {
   getAdsCreatedByMe,
   surfAds,
   depositSatoshi,
-  deleteAds
+  deleteAds,
+  updateAd
 };
