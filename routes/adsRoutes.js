@@ -4,6 +4,7 @@ import {
   deleteAds,
   depositSatoshi,
   getAdsCreatedByMe,
+  getASingleAdsCreatedByMe,
   getPublisedAds,
   surfAds,
   updateAd
@@ -18,5 +19,6 @@ router.get("/surfAds/:id", surfAds);
 router.get("/depositSatoshi/:id", depositSatoshi);
 router.delete("/deleteAds/:id", deleteAds);
 router.put("/updateAds/:id", updateAd);
+router.get("/getASingleAdsCreatedByMe/:id", getASingleAdsCreatedByMe);
 
 export default router;
