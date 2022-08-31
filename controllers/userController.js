@@ -290,6 +290,43 @@ const resetPassword = async (req, res) => {
   }
 };
 
+//Update surfing balance
+const updateSurfingBalance = async (req, res) => {
+  try {
+    const { authorization } = req.headers;
+    const { surfingAmount } = req.body;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
+    if (token) {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      if (user) {
+        const email = user.id.email;
+        const db = req.app.locals.db;
+        const user_collection = await db.collection("user").findOne({ email: email });
+        await db.collection("user").updateOne(
+          { email: email },
+          {
+            $set: {
+              surfingBalance: Number(user_collection.surfingBalance) + Number(surfingAmount)
+            }
+          }
+        );
+        return res.status(200).json({ surfingAmount: surfingAmount });
+      } else {
+        return res.status(400).json({ error: "Verification failed!" });
+      }
+    } else {
+      return res.status(404).json({ error: "Token not found" });
+    }
+  } catch(error) {
+
+  }
+}
+
 //Generate JWT
 const generateToken = id => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -304,5 +341,6 @@ export {
   loginUser,
   resetPassword,
   getMe,
-  getAllUsers
+  getAllUsers,
+  updateSurfingBalance
 };

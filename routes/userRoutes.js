@@ -6,7 +6,8 @@ import {
   regGoogleAuthData,
   registerUser,
   registerWithGoogle,
-  resetPassword
+  resetPassword,
+  updateSurfingBalance
 } from "../controllers/userController.js";
 import authenticate from "../middleware/authenticate.js";
 
@@ -19,5 +20,6 @@ router.post("/login", loginUser);
 router.get("/user", getMe);
 router.get("/users", getAllUsers);
 router.post("/resetpassword", resetPassword);
+router.put("/updateSurfingBalance", updateSurfingBalance);
 
 export default router;
