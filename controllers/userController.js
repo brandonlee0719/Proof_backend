@@ -311,7 +311,7 @@ const updateSurfingBalance = async (req, res) => {
           return res.status(401).json({error: "Your escrow amount is insufficient. Please escrow your bill first."})
         } else {
           const user_collection = await db.collection("user").findOne({ email: email });
-          await db.collection('ads').updateOne(
+          await db.collection('Ads').updateOne(
             { _id: ObjectId(_id) },
             {
               $set: {
