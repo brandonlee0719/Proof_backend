@@ -20,6 +20,6 @@ router.post("/login", loginUser);
 router.get("/user", getMe);
 router.get("/users", getAllUsers);
 router.post("/resetpassword", resetPassword);
-router.put("/updateSurfingBalance", updateSurfingBalance);
+router.put("/updateSurfingBalance/:id", updateSurfingBalance);
 
 export default router;
