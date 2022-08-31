@@ -138,7 +138,7 @@ const getAdsCreatedByMe = async (req, res) => {
   }
 };
 
-const getASingleAdsCreatedByMe = async (req, res) => {
+const getAdById = async (req, res) => {
   try {
     const _id = req.params.id;
     const db = req.app.locals.db;
@@ -432,7 +432,7 @@ const updateAd = async (req, res) => {
   }
 };
 
-const depositSatoshi = async (req, res) => {
+const fundSatoshi = async (req, res) => {
   try {
     const _id = req.params.id;
     const amount = req.query.amount;
@@ -452,7 +452,7 @@ const depositSatoshi = async (req, res) => {
     }
     if (amount < 100) {
       return res.status(400).json({
-        error: "Please amount to be deposited must be a minimum of 100 satoshi"
+        error: "Please amount to be funded must be a minimum of 100 satoshi"
       });
     }
     const { authorization } = req.headers;
@@ -478,20 +478,23 @@ const depositSatoshi = async (req, res) => {
             }
           }
         );
-
-        await db.collection("user").updateOne(
-          { email },
-          {
-            $set: {
-              advertisingBalance:
-                Number(userCollection.advertisingBalance) + Number(amount)
+        if(Number(userCollection.advertisingBalance) - Number(amount) < 0) {
+          return res.status(401).json({error: "Your satoshi balance is less than the funded amount. Please top up your bill first."})
+        } else {
+          await db.collection("user").updateOne(
+            { email },
+            {
+              $set: {
+                advertisingBalance:
+                  Number(userCollection.advertisingBalance) - Number(amount)
+              }
             }
-          }
-        );
-
-        return res.status(201).json({
-          message: `Amount of ${amount} Satoshi has been deducted from your Satoshi balance and added to your escrow amount`
-        });
+          );
+  
+          return res.status(201).json({
+            message: `Amount of ${amount} Satoshi has been deducted from your Satoshi balance and added to your escrow amount`
+          });
+        }       
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }
@@ -573,8 +576,8 @@ export {
   getPublisedAds,
   getAdsCreatedByMe,
   surfAds,
-  depositSatoshi,
+  fundSatoshi,
   deleteAds,
   updateAd,
-  getASingleAdsCreatedByMe
+  getAdById
 };

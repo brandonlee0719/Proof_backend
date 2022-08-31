@@ -2,9 +2,9 @@ import express from "express";
 import {
   createAd,
   deleteAds,
-  depositSatoshi,
+  fundSatoshi,
   getAdsCreatedByMe,
-  getASingleAdsCreatedByMe,
+  getAdById,
   getPublisedAds,
   surfAds,
   updateAd
@@ -16,9 +16,9 @@ router.post("/createAds", createAd);
 router.get("/getAllAds", getPublisedAds);
 router.get("/getMyAds", getAdsCreatedByMe);
 router.get("/surfAds/:id", surfAds);
-router.get("/depositSatoshi/:id", depositSatoshi);
+router.get("/fundSatoshi/:id", fundSatoshi);
 router.delete("/deleteAds/:id", deleteAds);
 router.put("/updateAds/:id", updateAd);
-router.get("/getASingleAdsCreatedByMe/:id", getASingleAdsCreatedByMe);
+router.get("/getAdById/:id", getAdById);
 
 export default router;
