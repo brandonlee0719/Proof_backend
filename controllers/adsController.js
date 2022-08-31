@@ -459,7 +459,7 @@ const updateAdStatus = async (req, res) => {
       if (user) {
         if (ads_exists) {
           // check if the user is the creator of the ads and then update ads
-          if (email === ads_exists.creatorEmail) {
+          // if (email === ads_exists.creatorEmail) {
             await db.collection("Ads").updateOne(
               { _id: ObjectId(_id) },
               {
@@ -472,11 +472,11 @@ const updateAdStatus = async (req, res) => {
             return res.status(200).json({
               message: `Status with advertisement ${ads_exists._id} has been successfully updated`
             });
-          } else {
-            return res.status(400).json({
-              error: "You cannot edit this ads as you are not the owner"
-            });
-          }
+          // } else {
+          //   return res.status(400).json({
+          //     error: "You cannot edit this ads as you are not the owner"
+          //   });
+          // }
         } else {
           return res
             .status(400)
