@@ -15,6 +15,7 @@ const createAd = async (req, res) => {
       geoTargeting,
       rated,
       isPublished = false,
+      isPause = false,
       escrowAmount = 0
     } = req.body;
     if (
@@ -65,6 +66,7 @@ const createAd = async (req, res) => {
           geoTargeting,
           rated,
           isPublished,
+          isPause,
           escrowAmount,
           creatorEmail: email
         });
