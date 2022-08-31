@@ -497,7 +497,6 @@ const fundSatoshi = async (req, res) => {
         error: `Ads with id ${_id} does not exist`
       });
     }
-    // const { amount } = req.body;
     if (!amount) {
       return res.status(400).json({
         error: "Please amount is required"

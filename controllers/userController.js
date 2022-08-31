@@ -20,6 +20,9 @@ import { firebaseConfig } from "../services/firebaseConfig.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
+import mongoose from "mongoose";
+const { ObjectId } = mongoose.Types;
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
