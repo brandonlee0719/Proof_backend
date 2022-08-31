@@ -468,19 +468,20 @@ const fundSatoshi = async (req, res) => {
         let email = user.id.email;
         let userCollection = await db.collection("user").findOne({ email });
         console.log("ads collection", userCollection);
-
-        await db.collection("Ads").updateOne(
-          { _id: ObjectId(_id) },
-          {
-            $set: {
-              escrowAmount: Number(ads.escrowAmount) + Number(amount),
-              isPublished: true
-            }
-          }
-        );
+        
         if(Number(userCollection.advertisingBalance) - Number(amount) < 0) {
           return res.status(401).json({error: "Your satoshi balance is less than the funded amount. Please top up your bill first."})
         } else {
+          await db.collection("Ads").updateOne(
+            { _id: ObjectId(_id) },
+            {
+              $set: {
+                escrowAmount: Number(ads.escrowAmount) + Number(amount),
+                isPublished: true
+              }
+            }
+          );
+
           await db.collection("user").updateOne(
             { email },
             {
