@@ -293,6 +293,7 @@ const resetPassword = async (req, res) => {
 //Update surfing balance
 const updateSurfingBalance = async (req, res) => {
   try {
+    const _id = req.params.id;
     const { authorization } = req.headers;
     const { surfingAmount } = req.body;
     const token = authorization
@@ -300,22 +301,36 @@ const updateSurfingBalance = async (req, res) => {
         ? authorization.split("Bearer ")[1]
         : null
       : null;
-    console.log(token);
     if (token) {
       const user = jwt.verify(token, process.env.JWT_SECRET);
       if (user) {
         const email = user.id.email;
         const db = req.app.locals.db;
-        const user_collection = await db.collection("user").findOne({ email: email });
-        await db.collection("user").updateOne(
-          { email: email },
-          {
-            $set: {
-              surfingBalance: Number(user_collection.surfingBalance) + Number(surfingAmount)
+        const ads = await db.collection("Ads").findOne({ _id: ObjectId(_id) });
+        if(Number(ads.escrowAmount) < Number(surfingAmount)) {
+          return res.status(401).json({error: "Your escrow amount is insufficient. Please escrow your bill first."})
+        } else {
+          const user_collection = await db.collection("user").findOne({ email: email });
+          await db.collection('ads').updateOne(
+            { _id: ObjectId(_id) },
+            {
+              $set: {
+                escrowAmount: Number(ads.escrowAmount) - Number(surfingAmount),
+                isPublished: Number(ads.escrowAmount) == Number(surfingAmount) ? false : true
+              }
             }
-          }
-        );
-        return res.status(200).json({ surfingAmount: surfingAmount });
+          );
+
+          await db.collection("user").updateOne(
+            { email: email },
+            {
+              $set: {
+                surfingBalance: Number(user_collection.surfingBalance) + Number(surfingAmount)
+              }
+            }
+          );
+          return res.status(200).json({ message: "surfingBalance was successfully updated" });
+        }   
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }
