@@ -441,9 +441,7 @@ const updateAdStatus = async (req, res) => {
     let ads_exists = await db.collection("Ads").findOne({ _id: ObjectId(_id) });
     console.log(ads_exists);
 
-    const {
-      isPause
-    } = req.body;
+    const isPause = ads_exists.isPause;
 
     const { authorization } = req.headers;
     const token = authorization
