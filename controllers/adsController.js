@@ -465,7 +465,7 @@ const updateAdStatus = async (req, res) => {
               {
                 $set: {
                   isPause: isPause ? false : true,
-                  isPublished: false
+                  isPublished: isPause && ads_exists.escrowAmount ? true : false
                 }
               }
             );
