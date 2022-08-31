@@ -7,7 +7,8 @@ import {
   getAdById,
   getPublisedAds,
   surfAds,
-  updateAd
+  updateAd,
+  updateAdStatus
 } from "../controllers/adsController.js";
 
 const router = express.Router();
@@ -19,6 +20,7 @@ router.get("/surfAds/:id", surfAds);
 router.get("/fundSatoshi/:id", fundSatoshi);
 router.delete("/deleteAds/:id", deleteAds);
 router.put("/updateAds/:id", updateAd);
+router.put("/updateAdStatus/:id", updateAdStatus);
 router.get("/getAdById/:id", getAdById);
 
 export default router;
