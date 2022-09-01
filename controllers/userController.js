@@ -370,7 +370,8 @@ const depositFund = async (req, res) => {
             }
           }
         );
-        return res.status(200).json({ message: "depositAmount was successfully updated" });
+        const userCollection = await db.collection("user").findOne({ email });
+        return res.status(200).json({ user: userCollection });
       } else {
         return res.status(400).json({ error: "Verification failed!" });
       }
