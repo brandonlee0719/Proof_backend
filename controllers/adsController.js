@@ -144,8 +144,7 @@ const getAdsCreatedByMe = async (req, res) => {
 
 const getAdById = async (req, res) => {
   try {
-    // const _id = req.params.id;
-    const _id = '62fb020001f63b05b477dcbf'
+    const _id = req.params.id;
     const db = req.app.locals.db;
     const { authorization } = req.headers;
     const token = authorization
