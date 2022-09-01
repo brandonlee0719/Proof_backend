@@ -176,6 +176,37 @@ const getAdById = async (req, res) => {
   }
 };
 
+const getSurfAdById = async (req, res) => {
+  try {
+    const _id = req.params.id;
+    const db = req.app.locals.db;
+    const { authorization } = req.headers;
+    const token = authorization
+      ? authorization.split("Bearer ").length
+        ? authorization.split("Bearer ")[1]
+        : null
+      : null;
+    console.log(token);
+    if (token) {
+      const user = jwt.verify(token, process.env.JWT_SECRET);
+      if (user) {
+        const email = user.id.email;
+        const adsCollection = await db
+          .collection("Ads")
+          .findOne({ _id: ObjectId(_id) });
+        return res.status(200).json({ ads: adsCollection });
+      } else {
+        return res.status(400).json({ error: "Verification failed!" });
+      }
+    } else {
+      return res.status(404).json({ error: "Token not found" });
+    }
+  } catch (error) {
+    const message = error.toString();
+    return res.status(400).json({ error: message });
+  }
+};
+
 const surfAds = async (req, res) => {
   try {
     const _id = req.params.id;
@@ -635,5 +666,6 @@ export {
   deleteAds,
   updateAd,
   updateAdStatus,
-  getAdById
+  getAdById,
+  getSurfAdById
 };

@@ -5,6 +5,7 @@ import {
   fundSatoshi,
   getAdsCreatedByMe,
   getAdById,
+  getSurfAdById,
   getPublisedAds,
   surfAds,
   updateAd,
@@ -22,5 +23,6 @@ router.delete("/deleteAds/:id", deleteAds);
 router.put("/updateAds/:id", updateAd);
 router.put("/updateAdStatus/:id", updateAdStatus);
 router.get("/getAdById/:id", getAdById);
+router.get("/getSurfAdById/:id", getSurfAdById);
 
 export default router;
