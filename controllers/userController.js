@@ -346,7 +346,7 @@ const updateSurfingBalance = async (req, res) => {
 }
 
 //Deposit fund
-const depositFund = async () => {
+const depositFund = async (req, res) => {
   try {
     const { authorization } = req.headers;
     const { depositAmount } = req.body;
