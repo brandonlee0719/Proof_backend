@@ -83,6 +83,8 @@ const createAd = async (req, res) => {
   }
 };
 
+
+// get advertised ads
 const getPublisedAds = async (req, res) => {
   try {
     const { authorization } = req.headers;
@@ -591,7 +593,7 @@ const deleteAds = async (req, res) => {
               {
                 $set: {
                   advertisingBalance:
-                    Number(userCollection.advertisingBalance) -
+                    Number(userCollection.advertisingBalance) +
                     Number(adsEscrowAmount)
                 }
               }

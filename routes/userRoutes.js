@@ -7,7 +7,8 @@ import {
   registerUser,
   registerWithGoogle,
   resetPassword,
-  updateSurfingBalance
+  updateSurfingBalance,
+  depositFund
 } from "../controllers/userController.js";
 import authenticate from "../middleware/authenticate.js";
 
@@ -21,5 +22,6 @@ router.get("/user", getMe);
 router.get("/users", getAllUsers);
 router.post("/resetpassword", resetPassword);
 router.put("/updateSurfingBalance/:id", updateSurfingBalance);
+router.put("/depositFund", depositFund);
 
 export default router;
