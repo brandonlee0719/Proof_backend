@@ -15,7 +15,7 @@ const createAd = async (req, res) => {
       geoTargeting,
       rated,
       isPublished = false,
-      isPause = false,
+      isPause = true,
       escrowAmount = 0
     } = req.body;
     if (
