@@ -9,7 +9,7 @@ const app = express();
 
 db(config.MONGO_URI, app);
 
-app.use(cors({ origin: true }));
+app.use(cors({ origin: false }));
 app.use(express.json());
 
 app.use("/api/user", router);
