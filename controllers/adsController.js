@@ -163,6 +163,8 @@ const getAdById = async (req, res) => {
 
         if (email === adsCollection.creatorEmail) {
           return res.status(200).json({ ads: adsCollection });
+        } else {
+          return res.status(401).json({error: "Auth error"});
         }
       } else {
         return res.status(400).json({ error: "Verification failed!" });
