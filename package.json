@@ -1,7 +1,7 @@
 {
-  "name": "btcads-backend",
+  "name": "adbtc-backend",
   "version": "1.0.0",
-  "description": "btcads-backend",
+  "description": "adbtc-backend",
   "main": "index.js",
   "type": "module",
   "scripts": {
