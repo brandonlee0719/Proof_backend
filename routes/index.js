@@ -1,10 +1,12 @@
 import express from "express";
 import {
-  getTokenPrice
+  getProofByAddress,
+  getAllProofs
 } from "../controllers/index.js";
 
 const router = express.Router();
 
-router.get("/token/:id", getTokenPrice);
+router.post("/getProof", getProofByAddress);
+router.get("/getAllProofs", getAllProofs);
 
 export default router;
