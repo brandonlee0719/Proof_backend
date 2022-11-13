@@ -17,7 +17,7 @@
     "mongodb",
     "nodemon"
   ],
-  "author": "Robert",
+  "author": "Frank",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
